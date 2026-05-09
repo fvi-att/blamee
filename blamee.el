@@ -3,7 +3,8 @@
 
 ;; Author: fvi-att <jshimizujp@gmail.com>
 ;; Maintainer: fvi-att <jshimizujp@gmail.com>
-;; Version:1.0.3
+;; Assisted-by: Claude:claude-sonnet-4-6
+;; Version:1.0.4
 ;; Package-Requires: ((emacs "27.1"))
 ;; Keywords: tools, vc, git
 ;; URL: https://github.com/fvi-att/blamee
@@ -511,7 +512,7 @@ Returns non-nil when at least one placeholder was added."
     added))
 
 (defun blamee--realign-overlays (beg end)
-  "Snap blamee overlays in [BEG, END] back to their line-beginning-position.
+  "Snap blamee overlays in [BEG, END] back to their `line-beginning-position'.
 Zero-width overlays drift mid-line when the user inserts text at column
 0 (the marker advances past the new characters), which would push the
 blame prefix into the middle of the line.  Repositioning to BOL after
@@ -761,7 +762,7 @@ line (preferring a non-placeholder one) and remove the rest."
 (defun blamee--after-change (beg end len)
   "Keep the inline gutter aligned across BEG..END after a buffer change.
 LEN is the pre-change length of the replaced region.  Deletions
-(`LEN' > 0) can collapse multiple zero-width overlays onto the same
+\(LEN > 0) can collapse multiple zero-width overlays onto the same
 line, so dedupe them; insertions can leave new lines uncovered, so
 backfill placeholders.  In all cases re-run the visible layout pass."
   (when (bound-and-true-p blamee-mode)
