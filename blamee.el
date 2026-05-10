@@ -369,11 +369,17 @@ for the separator's glyph."
                   columns widths
                   (not (overlay-get overlay 'blamee-show-prefix)))))
     (when (> (length string) 0)
-      (let ((face-end (max 0 (1- (length string)))))
-        (add-face-text-property 0 face-end 'blamee-face t string)
+      ;; `blamee-face' (height 0.6) applies to every character so the trailing
+      ;; spacer keeps the same scale as the rest of the prefix; otherwise the
+      ;; final space would render at full size and visually push the source
+      ;; column one cell to the right.  The per-commit background still skips
+      ;; the last cell so the cursor at point=BOL is not painted with the
+      ;; chunk color.
+      (let ((bg-end (max 0 (1- (length string)))))
+        (add-face-text-property 0 (length string) 'blamee-face t string)
         (put-text-property 0 (length string) 'help-echo detail string)
         (when bg
-          (add-face-text-property 0 face-end
+          (add-face-text-property 0 bg-end
                                   `(:background ,bg)
                                   nil string))))
     (overlay-put overlay 'before-string string)))
@@ -449,7 +455,12 @@ first chunk line, COLUMNS is the rendered inline column alist, and
 PLACEHOLDER non-nil marks the overlay as a coverage placeholder for an
 unsaved local edit."
   (let* ((bol (line-beginning-position))
-         (ov (make-overlay bol bol nil t t))
+         ;; Both insertion types are nil so the BEG marker stays at BOL when
+         ;; the user inserts text at column 0 — otherwise the marker would
+         ;; advance past the new characters and push the inline prefix into
+         ;; the middle of the line.  See `blamee--realign-overlays' for the
+         ;; remaining drift case (line-merge by deletion).
+         (ov (make-overlay bol bol nil nil nil))
          (detail (blamee--format-detail commit))
          (bg (blamee--commit-background commit)))
     (overlay-put ov 'before-string "")
@@ -513,10 +524,12 @@ Returns non-nil when at least one placeholder was added."
 
 (defun blamee--realign-overlays (beg end)
   "Snap blamee overlays in [BEG, END] back to their `line-beginning-position'.
-Zero-width overlays drift mid-line when the user inserts text at column
-0 (the marker advances past the new characters), which would push the
-blame prefix into the middle of the line.  Repositioning to BOL after
-every change keeps the inline gutter glued to the left edge."
+Insertion-time drift is prevented by creating overlays with non-advancing
+markers (see `blamee--add-overlay-at-point'), but deletions can still
+displace overlays: deleting a newline merges two lines and the second
+overlay ends up mid-line.  Repositioning to BOL after every change keeps
+the inline gutter glued to the left edge.  Duplicate overlays produced
+by such merges are removed by `blamee--dedupe-line-overlays'."
   (save-excursion
     (goto-char (max (point-min) beg))
     (let ((stop (min (point-max) end))
