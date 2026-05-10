@@ -34,8 +34,9 @@ echo area when you move point into the chunk.
   fallback on TTY) shows author / date / hash / summary on point hover.
 - **Mouse tooltips** — `help-echo` is attached to the inline prefix too,
   so hovering with the mouse works as well.
-- **Auto-enable** — `global-blamee-mode` activates only for file-visiting
-  buffers inside a git working tree.
+- **Opt-in activation** — enable per buffer with `blamee-mode`, or globally
+  with `global-blamee-mode` (activates only for file-visiting buffers inside
+  a git working tree).
 - **Zero dependencies** beyond Emacs 27.1.
 
 ## Requirements
@@ -50,7 +51,8 @@ echo area when you move point into the chunk.
 ```elisp
 (straight-use-package
  '(blamee :type git :host github :repo "fvi-att/blamee"))
-(global-blamee-mode 1)
+;; Enable per buffer: M-x blamee-mode
+;; Or enable globally: (global-blamee-mode 1)
 ```
 
 ### use-package + straight
@@ -58,7 +60,8 @@ echo area when you move point into the chunk.
 ```elisp
 (use-package blamee
   :straight (blamee :type git :host github :repo "fvi-att/blamee")
-  :hook (after-init . global-blamee-mode)
+  ;; Remove the :hook line below to keep blamee-mode opt-in per buffer.
+  ;; :hook (after-init . global-blamee-mode)
   :bind (("C-c b b" . blamee-show-commit-at-point)
          ("C-c b y" . blamee-copy-commit-hash-at-point)
          ("C-c b r" . blamee-refresh)))
@@ -71,7 +74,8 @@ Clone the repository somewhere and point `load-path` at it:
 ```elisp
 (add-to-list 'load-path "/path/to/blamee")
 (require 'blamee)
-(global-blamee-mode 1)
+;; Enable per buffer: M-x blamee-mode
+;; Or enable globally: (global-blamee-mode 1)
 ```
 
 ### MELPA
