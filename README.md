@@ -231,19 +231,26 @@ working even with the popup off.
 
 ## Development
 
-```sh
-# Byte-compile (also runs as a lint)
-emacs -Q --batch -L . -f batch-byte-compile blamee.el
+### Byte-compile
 
-# Run the ERT test suite (requires git on PATH)
+```sh
+emacs -Q --batch -L . -f batch-byte-compile blamee.el
+```
+
+### Tests
+
+The test suite uses ERT and requires `git` on `PATH`.
+
+```sh
 emacs -Q --batch -L . -L tests -l tests/blamee-test.el \
       -f ert-run-tests-batch-and-exit
 ```
 
-The tests under `tests/` build a throwaway git repository and assert
-that the inline blame gutter stays aligned across inserts, deletes and
-in-line edits — the property the `blamee-mode` activation no longer
-enforces by making the buffer read-only.
+The tests under `tests/` cover the porcelain parser and inline prefix
+formatter, then build a throwaway git repository to assert that the
+inline blame gutter stays aligned across line inserts, line deletes and
+in-line character edits — the property the `blamee-mode` activation no
+longer enforces by making the buffer read-only.
 
 ## License
 
