@@ -19,15 +19,20 @@ when the cursor lands on a blamed line.
 
 The blame prefix stays compact by default: **commit date + author**.
 You can change the visible inline columns from `M-x customize-group RET
-blamee`, and the inline area widens or shrinks to the longest visible
-value in the current window instead of reserving a fixed width. Full
-details (author, timestamp, 12-char hash, summary) appear in a popup or
-echo area when you move point into the chunk.
+blamee`; the inline area is sized once per refresh to the longest value
+in the file and aligned pixel-perfectly with `space :align-to` stretch
+glyphs, so it never wobbles while you scroll or edit. Full details
+(author, timestamp, 12-char hash, summary) appear in a popup or echo
+area when you move point into the chunk.
 
 ## Features
 
 - **Chunk grouping** — the inline prefix is drawn only on the first line
   of each same-commit run; continuation lines keep the source aligned.
+- **Pixel-perfect alignment** — the display engine pads every column with
+  stretch glyphs, so bold/regular advance widths, font fallbacks for the
+  separator glyph, or the scaled-down prefix face cannot shift the source
+  column, and the cursor always lands on the real first character.
 - **Per-commit background color** — hue derived from the commit hash,
   so the colored stripe visualizes how far each chunk extends.
 - **Popup details** — a frameless child frame on GUI Emacs (echo area
@@ -106,19 +111,17 @@ RET blamee`).
 | Variable                     | Default       | Meaning                                         |
 |------------------------------|---------------|-------------------------------------------------|
 | `blamee-inline-columns`      | `(date author)` | Ordered inline columns to render.             |
-| `blamee-comment-max-length`  | `10`          | Max inline summary width before truncation.     |
 | `blamee-date-format`         | `"%y-%m-%d"`  | `format-time-string` spec for the inline date.  |
-| `blamee-separator`           | `" │ "`       | Glyph between blame prefix and source.          |
+| `blamee-separator`           | `" │"`        | Glyph between blame prefix and source.          |
 | `blamee-uncommitted-label`   | `"Uncommitted"` | Label shown for uncommitted lines.            |
 | `blamee-uncommitted-summary` | `"(not yet committed)"` | Summary text for uncommitted lines.   |
-| `blamee-author-max-length`   | `5`           | Max inline author width before truncation.      |
 | `blamee-hash-length`         | `6`           | Max inline hash width before truncation.        |
 
 `blamee-inline-columns` accepts any ordered combination of `author`,
 `date`, `summary`, and `hash`. The default stays intentionally small,
 but you can expose more metadata inline when needed. The separator
-position follows the longest visible value in the current window, so the
-blame gutter grows and shrinks as you scroll.
+position is computed once per refresh from the longest value in the
+whole file, so the blame gutter keeps a stable width while you scroll.
 
 ### Chunk background color
 
@@ -172,8 +175,7 @@ one-liner:
 ### Recipe: compact dark theme
 
 ```elisp
-(setq blamee-comment-max-length 8
-      blamee-date-format "%m-%d"
+(setq blamee-date-format "%m-%d"
       blamee-inline-columns '(date summary)
       blamee-background-saturation 0.25
       blamee-background-lightness 0.2)
@@ -183,7 +185,6 @@ one-liner:
 
 ```elisp
 (setq blamee-inline-columns '(author date hash summary)
-      blamee-author-max-length 10
       blamee-hash-length 8)
 ```
 
@@ -206,10 +207,15 @@ working even with the popup off.
 ## How it works
 
 1. `git blame --porcelain` is run against the file on disk.
-2. The output is parsed into `(LINENO . COMMIT-PLIST)` entries.
-3. For each line, a zero-width overlay is placed at `line-beginning-position`
-   with a `before-string` that contains the blame prefix (or a same-width
-   spacer for continuation lines).
+2. The output is parsed into `(LINENO . COMMIT-PLIST)` entries and
+   grouped into chunks of consecutive same-commit lines.
+3. Each chunk gets at most two overlays: one over its first line carrying
+   the full blame prefix as its `line-prefix` display property, and one
+   over the remaining lines carrying a blank spacer prefix. Inside the
+   prefix, every column ends with a `space :align-to` stretch glyph whose
+   pixel position is computed once per refresh from the longest value in
+   the file, so the display engine — not character counting — guarantees
+   that all source lines start at the same pixel.
 4. `display-line-numbers-mode` renders line numbers in its dedicated
    pre-text area, so the blame prefix appears **between** the numbers
    and the source text.
@@ -219,8 +225,9 @@ working even with the popup off.
 ## Limitations / notes
 
 - Blame is computed against the **on-disk** file; unsaved changes are
-  ignored until the next save. Lines you have just inserted receive a
-  zero-width placeholder overlay so the inline gutter stays aligned
+  ignored until the next save. Lines inserted inside a chunk inherit its
+  prefix from the chunk overlay; lines appended outside every overlay
+  receive a blank placeholder prefix so the inline gutter stays aligned
   while you edit, and the real blame is recomputed on save.
 - Files not yet committed are labeled as `Uncommitted` with no background
   color.
